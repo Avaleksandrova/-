@@ -1,0 +1,152 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+
+int global_variable_number_swaps;
+int global_variable_number_compares;
+
+static void swapDouble(double* a, double* b){//Обмен
+    double c = *a;
+    *a = *b;
+    *b = c;
+    ++global_variable_number_swaps;
+}
+
+static int lessDouble(double a, double b){//Сравнения
+    ++global_variable_number_compares;
+    return a<b;
+}
+
+static void bubbleSort(double* array, int size){//Пузырьковая
+    int i, j;
+    for (i = 0; i + 1 < size; ++i){
+        for (j = 0; j + 1 + i < size; ++j){
+            if (lessDouble(array[j + 1], array[j])){
+                swapDouble(array+j,array+j+1);
+            }
+        }
+    }
+}
+
+static void ShellSort(double* array, int size){//Сортировка методом Шелла
+    int i, j, step;
+    for (step = size/2;step > 0; step /= 2){
+        for (i = step;i < size; ++i) {
+            for (j = i-step; j >= 0; j -= step){
+                if (lessDouble(array[j + step], array[j])){
+                    swapDouble(array + j, array + j + step);
+                }
+                else {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static void getAscendingSortedArray(double* array, int size){//заполнение массива по возрастанию
+    for (int i = 0; i < size; ++i) {
+        array[i] = i;
+    }
+}
+
+static void getDescendingSortedArray(double* array, int size){//заполнение массива по убыванию
+    for (int i = 0; i < size; ++i) {
+        array[i] = size - i;
+    }
+}
+
+static void getRandomArray(double* array, int size){//заполнение массива рандомными числами
+    for (int i = 0;i < size;++i){
+        array[i] = (double) rand() / (rand() % (RAND_MAX - 1) + 1);
+        array[i] = (rand() % 2 == 1) ? array[i] : -array[i];
+    }
+}
+
+static void copyArray(double* dst, double* src, int size){
+    for (int i = 0; i < size; ++i) {
+        dst[i] = src[i];
+    }
+}
+
+static int checkSort(double* base_array, double* sorted_array,int size){//Проверка корректности сортировки
+    int i, j, n_used = 0;
+    char* used;
+    for (i = 0; i + 1 < size; ++i){//проверка, что массив отсортирован по неубыванию
+        if (sorted_array[i] > sorted_array[i + 1]) {
+            return 0;
+        }
+    }
+    used = (char*) malloc(size * sizeof(char));
+    for (i = 0; i < size; ++i){
+        used[i] = 0;
+    }
+    for (i = 0; i < size; ++i){//проверка на то, что все числа из исходного присутствуют в отсортированном массиве
+        for (j = 0; j < size; ++j) {
+            if (!used[j] && base_array[i] == sorted_array[j]) {
+                ++n_used;
+                used[j] = 1;
+                break;
+            }
+        }
+    }
+    free(used);
+    return n_used == size;//возвращает 1, если сортировка корректна, иначе-0
+}
+
+
+//функция, которая тестирует сортировки
+static void testSorts(double* base_array, double* array_one, double* array_two, int size,void (*getArray)(double*, int)){
+    int n_swaps_one, n_swaps_two, n_comp_one, n_comp_two;
+    int check_one, check_two;
+    getArray(base_array, size);//генерация исходного массива и копирование в два других
+    copyArray(array_one, base_array, size);
+    copyArray(array_two, base_array, size);
+
+    global_variable_number_compares = 0;//пузырьком
+    global_variable_number_swaps = 0;
+    bubbleSort(array_one, size);
+    n_comp_one = global_variable_number_compares;
+    n_swaps_one = global_variable_number_swaps;
+
+    global_variable_number_compares = 0;//Шеллом
+    global_variable_number_swaps = 0;
+    ShellSort(array_two, size);
+    n_comp_two = global_variable_number_compares;
+    n_swaps_two = global_variable_number_swaps;
+
+    check_one = checkSort(base_array, array_one, size);//корректность
+    check_two = checkSort(base_array, array_two, size);
+    printf("Type of sorting       Number of swaps       Number of compares       Sorting correctness\n");
+    printf("Bubble       %24d       %18d       %s\n", n_swaps_one, n_comp_one,(check_one ? "YES":"NO"));
+    printf("The Shell method      %15d       %18d       %s\n", n_swaps_two, n_comp_two,(check_two ? "YES":"NO"));
+}
+
+
+int main(void){
+    srand(time(0));
+    int size, is_read;
+    double* base_array, * array_one, * array_two;
+    printf("Enter the size of array: ");
+    is_read = scanf("%d", &size);
+    if (is_read != 1 || size <= 0){
+        printf("Incorrect data\n");
+        return 1;
+    }
+    base_array = (double*)malloc(size*sizeof(double));
+    array_one = (double*)malloc(size*sizeof(double));
+    array_two = (double*)malloc(size*sizeof(double));
+    printf("\nChecking sorting on already sorted data\n");
+    testSorts(base_array, array_one, array_two, size, getAscendingSortedArray);
+    printf("\nChecking sorting on back-sorted data\n");
+    testSorts(base_array, array_one, array_two, size, getDescendingSortedArray);
+    printf("\nChecking sorts on random data v1\n");
+    testSorts(base_array, array_one, array_two, size, getRandomArray);
+    printf("\nChecking sorts on random data v2\n");
+    testSorts(base_array, array_one, array_two, size, getRandomArray);
+    free(base_array);
+    free(array_one);
+    free(array_two);
+    return 0;
+}
